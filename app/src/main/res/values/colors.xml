@@ -5,4 +5,10 @@
     <color name="colorAccent">#067EDE</color>
 
     <color name="white">#FFFFFF</color>
+
+    <color name="chart_background">#E6EEF5</color>
+    <color name="chart_grid">#8DCA63</color>
+    <color name="chart_value">#97CC64</color>
+    <color name="chart_default">#FADB87</color>
+
 </resources>
