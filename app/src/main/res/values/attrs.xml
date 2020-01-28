@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="ChartWidget">
+        <attr name="rowHeight" format="dimension"/>
+        <attr name="footerHeight" format="dimension"/>
+        <attr name="maxColumns" format="integer"/>
+    </declare-styleable>
+</resources>

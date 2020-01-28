@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import ru.dmisb.testchart.R
@@ -22,17 +23,20 @@ class ChartWidget @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     companion object {
-        private const val ROW_HEIGHT = 32f
-        private const val FOOTER_HEIGHT = 24f
-        private const val MAX_COLUMNS = 6
+        private const val DEFAULT_ROW_HEIGHT = 32f
+        private const val DEFAULT_FOOTER_HEIGHT = 24f
+        private const val DEFAULT_MAX_COLUMNS = 6
     }
+
+    private var rowHeight: Float = context.dpToPx(DEFAULT_ROW_HEIGHT)
+    private var footerHeight : Float = context.dpToPx(DEFAULT_FOOTER_HEIGHT)
+    private var maxColumns : Int = DEFAULT_MAX_COLUMNS
 
     private val displayWidth: Int = context.resources.displayMetrics.widthPixels
     private var columnWidth: Float = 0f
     private var gridLineWidth: Float = 0f
-    private var dataRowHeight: Float = 0f
 
-    private var workLineNames: List<String> = listOf()
+    private var prodLineNames: List<String> = listOf()
     private var history: List<History> = listOf()
     private var average: List<Pair<String, Double>> = listOf()
     private var dateFormat : SimpleDateFormat? = null
@@ -49,8 +53,15 @@ class ChartWidget @JvmOverloads constructor(
     private var selectedCell: SelectedCell? = null
 
     init {
+        if (attrs != null) {
+            val a = context.obtainStyledAttributes(attrs, R.styleable.ChartWidget)
+            rowHeight = a.getDimension(R.styleable.ChartWidget_rowHeight, context.dpToPx(DEFAULT_ROW_HEIGHT))
+            footerHeight = a.getDimension(R.styleable.ChartWidget_footerHeight, context.dpToPx(DEFAULT_FOOTER_HEIGHT))
+            maxColumns = a.getInt(R.styleable.ChartWidget_maxColumns, DEFAULT_MAX_COLUMNS)
+            a.recycle()
+        }
+
         gridLineWidth = context.dpToPx(1f)
-        dataRowHeight = context.dpToPx(ROW_HEIGHT)
 
         backgroundPaint.color = context.color(R.color.chart_background)
         backgroundPaint.style = Paint.Style.FILL
@@ -69,21 +80,24 @@ class ChartWidget @JvmOverloads constructor(
         gridPaint.strokeWidth = gridLineWidth
 
         setOnTouchListener { _, event ->
-            when (event.action and MotionEvent.ACTION_MASK)  {
-                MotionEvent.ACTION_DOWN -> {
+            Log.d("TAG_APP", "ChartWidget OnTouchListener event=${event.actionMasked}")
+            when (event.actionMasked)  {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_MOVE -> {
+                    downX = 0f
+                    downY = 0f
+                }
+                MotionEvent.ACTION_UP -> {
                     downX = event.x
                     downY = event.y
-                }
-                MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP -> {
                     invalidate()
                 }
             }
-            false
+            true
         }
     }
 
-    fun setWorkLineNames(names: List<String>) {
-        workLineNames = names
+    fun setProdLineNames(names: List<String>) {
+        prodLineNames = names
         measure(0, 0)
         invalidate()
     }
@@ -108,8 +122,8 @@ class ChartWidget @JvmOverloads constructor(
     private fun calcColumnWidth() {
         columnWidth = when {
             average.isEmpty() -> 0f
-            average.size <= MAX_COLUMNS -> (displayWidth - paddingLeft - paddingRight).toFloat() / average.size
-            else -> (displayWidth - paddingLeft).toFloat() / MAX_COLUMNS
+            average.size <= maxColumns -> (displayWidth - paddingLeft - paddingRight).toFloat() / average.size
+            else -> (displayWidth - paddingLeft).toFloat() / maxColumns
         }
     }
 
@@ -121,8 +135,8 @@ class ChartWidget @JvmOverloads constructor(
 
         if (newWidth < displayWidth) newWidth = displayWidth
 
-        val newHeight = (dataRowHeight * (workLineNames.size + 1)) +
-                context.dpToPx(FOOTER_HEIGHT) +
+        val newHeight = (rowHeight * (prodLineNames.size + 1)) +
+                footerHeight +
                 paddingTop + paddingBottom
         setMeasuredDimension(newWidth, newHeight.toInt())
     }
@@ -136,6 +150,8 @@ class ChartWidget @JvmOverloads constructor(
             drawHistory(it)
             drawGrid(it)
             drawFooter(it)
+            if (selectedCell != null)
+                drawSelectedCell(it)
         }
     }
 
@@ -153,10 +169,23 @@ class ChartWidget @JvmOverloads constructor(
         average.forEachIndexed { index, data ->
             val x1 = columnWidth * index + paddingLeft
             val x2 = x1 + (columnWidth * data.second).toFloat()
-            val x3 = columnWidth * (index + 1) + paddingLeft - gridLineWidth
+            val x3 = columnWidth * (index + 1) + paddingLeft
 
             val y1 = paddingTop.toFloat()
-            val y2 = y1 + dataRowHeight - gridLineWidth
+            val y2 = y1 + rowHeight
+
+            if (downX != 0f && downX >= x1 && downX <= x3 && downY != 0f && downY >= y1 && downY <= y2) {
+                selectedCell = SelectedCell(
+                    prodLine = "",
+                    time = data.first,
+                    value = data.second,
+                    startX = x1,
+                    valueX = x2,
+                    endX = x3,
+                    startY = y1,
+                    endY = y2
+                )
+            }
 
             canvas.drawRect(x1, y1, x2, y2, averagePaint)
             canvas.drawRect(x2, y1, x3, y2, defaultPaint)
@@ -164,13 +193,44 @@ class ChartWidget @JvmOverloads constructor(
     }
 
     private fun drawHistory(canvas: Canvas) {
+        prodLineNames.forEachIndexed { prodLineIndex, prodLineName ->
+            history.firstOrNull { it.prodline_title == prodLineName }?.data?.let { prodLine ->
+                average.forEachIndexed { timeIndex, data ->
+                    prodLine.firstOrNull {
+                        dateFormat?.format(it.time) == data.first
+                    }?.let {
+                        val x1 = columnWidth * timeIndex + paddingLeft
+                        val x2 = x1 + (columnWidth * it.value).toFloat()
+                        val x3 = columnWidth * (timeIndex + 1) + paddingLeft
 
+                        val y1 = paddingTop.toFloat() + rowHeight * (prodLineIndex + 1)
+                        val y2 = y1 + rowHeight
+
+                        canvas.drawRect(x1, y1, x2, y2, valuePaint)
+                        canvas.drawRect(x2, y1, x3, y2, defaultPaint)
+
+                        if (downX != 0f && downX >= x1 && downX <= x3 && downY != 0f && downY >= y1 && downY <= y2) {
+                            selectedCell = SelectedCell(
+                                prodLine = prodLineName,
+                                time = data.first,
+                                value = it.value,
+                                startX = x1,
+                                valueX = x2,
+                                endX = x3,
+                                startY = y1,
+                                endY = y2
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun drawGrid(canvas: Canvas) {
         var y = 0f
-        (1 .. workLineNames.size + 1).forEach {
-            y = dataRowHeight * it
+        (0 .. prodLineNames.size).forEach {
+            y = rowHeight * (it + 1)
             canvas.drawLine(
                 paddingLeft.toFloat(),
                 y,
@@ -179,6 +239,14 @@ class ChartWidget @JvmOverloads constructor(
                 gridPaint
             )
         }
+
+        canvas.drawLine(
+            paddingLeft.toFloat(),
+            y + footerHeight,
+            (width - paddingRight).toFloat(),
+            y + footerHeight,
+            gridPaint
+        )
 
         if (history.isNotEmpty()) {
             val data = history[0].data
@@ -191,6 +259,10 @@ class ChartWidget @JvmOverloads constructor(
     }
 
     private fun drawFooter(canvas: Canvas) {
+
+    }
+
+    private fun drawSelectedCell(canvas: Canvas) {
 
     }
 
