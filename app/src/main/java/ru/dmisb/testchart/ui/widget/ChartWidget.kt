@@ -1,6 +1,7 @@
 package ru.dmisb.testchart.ui.widget
 
 import android.content.Context
+import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
@@ -34,9 +35,9 @@ class ChartWidget @JvmOverloads constructor(
     private var maxColumns : Int = DEFAULT_MAX_COLUMNS
 
     private val displayWidth: Int = context.resources.displayMetrics.widthPixels
+    private var gridLineWidth: Float = context.dpToPx(1f)
+    private var shadowWidth: Float = context.dpToPx(3f)
     private var columnWidth: Float = 0f
-    private var gridLineWidth: Float = 1f
-
 
     private var prodLineNames: List<String> = listOf()
     private var history: List<History> = listOf()
@@ -64,8 +65,6 @@ class ChartWidget @JvmOverloads constructor(
             a.recycle()
         }
 
-        gridLineWidth = context.dpToPx(1f)
-
         backgroundPaint.color = context.color(R.color.chart_background)
         backgroundPaint.style = Paint.Style.FILL
 
@@ -85,7 +84,15 @@ class ChartWidget @JvmOverloads constructor(
         footerPaint.color = context.color(R.color.chart_footer_text)
         footerPaint.isAntiAlias = true
         footerPaint.textSize = resources.getDimensionPixelSize(R.dimen.chart_footer_text_size).toFloat()
-        footerPaint.style = Paint.Style.STROKE
+        footerPaint.style = Paint.Style.FILL
+
+        val filter = BlurMaskFilter(shadowWidth, BlurMaskFilter.Blur.NORMAL)
+        shadowPaint.color = context.color(R.color.chart_shadow)
+        shadowPaint.isAntiAlias = true
+        shadowPaint.maskFilter = filter
+        shadowPaint.style = Paint.Style.FILL
+
+        setLayerType(LAYER_TYPE_SOFTWARE, null)
 
         setOnTouchListener { _, event ->
             Log.d("TAG_APP", "ChartWidget OnTouchListener event=${event.actionMasked}")
@@ -139,7 +146,7 @@ class ChartWidget @JvmOverloads constructor(
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
 
         var newWidth = if (columnWidth == 0f) displayWidth
-        else (columnWidth * history.size).toInt() + paddingLeft + paddingRight
+        else (columnWidth * average.size).toInt() + paddingLeft + paddingRight
 
         if (newWidth < displayWidth) newWidth = displayWidth
 
@@ -151,7 +158,6 @@ class ChartWidget @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-
         canvas?.let {
             drawBackground(it)
             drawAverage(it)
@@ -298,7 +304,35 @@ class ChartWidget @JvmOverloads constructor(
     }
 
     private fun drawSelectedCell(canvas: Canvas) {
-
+        // Отрисовка выделенной ячейки
+        selectedCell?.apply {
+            // Заливка ячейки фоном с тенью
+            canvas.drawRoundRect(
+                this.startX - shadowWidth / 2,
+                this.startY - shadowWidth / 2,
+                this.endX + shadowWidth,
+                this.endY + shadowWidth,
+                shadowWidth,
+                shadowWidth,
+                shadowPaint
+            )
+            // Отрисовка значения
+            canvas.drawRect(
+                this.startX,
+                this.startY,
+                this.valueX,
+                this.endY,
+                valuePaint
+            )
+            // и оставшегося места
+            canvas.drawRect(
+                this.valueX,
+                this.startY,
+                this.endX,
+                this.endY,
+                defaultPaint
+            )
+        }
     }
 
     class SelectedCell(
