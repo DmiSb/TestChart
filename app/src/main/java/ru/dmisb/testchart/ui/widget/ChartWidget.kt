@@ -4,10 +4,10 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.util.AttributeSet
+import android.view.MotionEvent
 import android.view.View
 import ru.dmisb.testchart.R
 import ru.dmisb.testchart.data.model.ChartData
-import ru.dmisb.testchart.data.model.Data
 import ru.dmisb.testchart.data.model.History
 import ru.dmisb.testchart.data.model.TimeStep
 import ru.dmisb.testchart.utils.color
@@ -34,8 +34,8 @@ class ChartWidget @JvmOverloads constructor(
 
     private var workLineNames: List<String> = listOf()
     private var history: List<History> = listOf()
-    private var average: List<Data> = listOf()
-    private var timeFormat : SimpleDateFormat? = null
+    private var average: List<Pair<String, Double>> = listOf()
+    private var dateFormat : SimpleDateFormat? = null
 
     private val backgroundPaint = Paint()
     private val averagePaint = Paint()
@@ -43,6 +43,10 @@ class ChartWidget @JvmOverloads constructor(
     private val valuePaint = Paint()
     private val gridPaint = Paint()
     private val footerPaint = Paint()
+
+    private var downX: Float = 0f
+    private var downY: Float = 0f
+    private var selectedCell: SelectedCell? = null
 
     init {
         gridLineWidth = context.dpToPx(1f)
@@ -57,9 +61,25 @@ class ChartWidget @JvmOverloads constructor(
         defaultPaint.color = context.color(R.color.chart_default)
         defaultPaint.style = Paint.Style.FILL
 
+        valuePaint.color = context.color(R.color.chart_value)
+        valuePaint.style = Paint.Style.FILL
+
         gridPaint.color = context.color(R.color.chart_grid)
         gridPaint.style = Paint.Style.STROKE
         gridPaint.strokeWidth = gridLineWidth
+
+        setOnTouchListener { _, event ->
+            when (event.action and MotionEvent.ACTION_MASK)  {
+                MotionEvent.ACTION_DOWN -> {
+                    downX = event.x
+                    downY = event.y
+                }
+                MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP -> {
+                    invalidate()
+                }
+            }
+            false
+        }
     }
 
     fun setWorkLineNames(names: List<String>) {
@@ -69,12 +89,15 @@ class ChartWidget @JvmOverloads constructor(
     }
 
     fun setData(data: ChartData?) {
-        history = data?.history.orEmpty()
-        average = data?.data.orEmpty()
-
         TimeStep.values().firstOrNull { it.value == data?.timeStep.orEmpty() }?.let {
-            timeFormat = SimpleDateFormat(it.formatPattern, Locale.getDefault())
+            dateFormat = SimpleDateFormat(it.formatPattern, Locale.getDefault())
         }
+
+        history = data?.history.orEmpty()
+        average = data?.data?.map {
+            val time = dateFormat?.format(it.time).orEmpty()
+            Pair(time, it.value)
+        }.orEmpty()
 
         calcColumnWidth()
 
@@ -129,11 +152,14 @@ class ChartWidget @JvmOverloads constructor(
     private fun drawAverage(canvas: Canvas) {
         average.forEachIndexed { index, data ->
             val x1 = columnWidth * index + paddingLeft
-            val y = paddingTop.toFloat()
-            val x2 = x1 + (columnWidth * data.value).toFloat()
+            val x2 = x1 + (columnWidth * data.second).toFloat()
             val x3 = columnWidth * (index + 1) + paddingLeft - gridLineWidth
-            canvas.drawRect(x1, y, x2, y + dataRowHeight, averagePaint)
-            canvas.drawRect(x2, y, x3, y + dataRowHeight, defaultPaint)
+
+            val y1 = paddingTop.toFloat()
+            val y2 = y1 + dataRowHeight - gridLineWidth
+
+            canvas.drawRect(x1, y1, x2, y2, averagePaint)
+            canvas.drawRect(x2, y1, x3, y2, defaultPaint)
         }
     }
 
@@ -167,4 +193,15 @@ class ChartWidget @JvmOverloads constructor(
     private fun drawFooter(canvas: Canvas) {
 
     }
+
+    class SelectedCell(
+        val prodLine: String,
+        val time: String,
+        val value: Double,
+        val startX: Float,
+        val endX: Float,
+        val valueX: Float,
+        val startY: Float,
+        val endY: Float
+    )
 }
