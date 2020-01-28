@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Test Chart</string>
+
+    <string name="chart_widget_average">Среднее</string>
 </resources>

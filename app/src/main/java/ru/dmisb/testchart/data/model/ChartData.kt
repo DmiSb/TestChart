@@ -1,5 +1,7 @@
 package ru.dmisb.testchart.data.model
 
+import java.util.*
+
 class ChartData(
     val history: List<History>,
     val data: List<Data>,
@@ -20,7 +22,7 @@ class History(
 )
 
 class Data(
-    val time: String,
+    val time: Date,
     val value: Double,
     val total: Int,
     val totalPeriod: Int

@@ -12,6 +12,6 @@ class MainViewModel : ViewModel() {
     val data : LiveData<ChartData> = _data
 
     init {
-        _data.value = MockData.getDailyData()
+        _data.value = MockData.getDailyData10Hour()
     }
 }

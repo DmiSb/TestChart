@@ -6,7 +6,8 @@
 
     <color name="white">#FFFFFF</color>
 
-    <color name="chart_background">#E6EEF5</color>
+    <color name="chart_background">#E5E5E5</color>
+    <color name="chart_average">#26B759</color>
     <color name="chart_grid">#8DCA63</color>
     <color name="chart_value">#97CC64</color>
     <color name="chart_default">#FADB87</color>

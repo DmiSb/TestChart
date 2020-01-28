@@ -1,13 +1,13 @@
 package ru.dmisb.testchart.data
 
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import ru.dmisb.testchart.data.model.ChartData
 
 object MockData {
 
-    private val gson = Gson()
+    private val gson = GsonBuilder().setDateFormat("yyyy-MM-dd HH:mm:ss").create()
 
-    private val dailyData = """
+    private val dailyData10Hour = """
         {"history":[
             {"prodline_id":1,"prodline_title":"2.1","data":[
                     {"time":"2020-01-26 08:00:00","value":0.98478849760367,"total":3600,"totalPeriod":3600},
@@ -131,6 +131,7 @@ object MockData {
         ],"kim":0.95833980562313,"total":57214,"totalPeriod":86400,"timeStep":"hour"}
     """.trimIndent()
 
-    fun getDailyData() : ChartData =
-        gson.fromJson<ChartData>(dailyData, ChartData::class.java)
+    fun getDailyData10Hour() : ChartData = parseJson(dailyData10Hour)
+
+    private fun parseJson(json: String) = gson.fromJson<ChartData>(json, ChartData::class.java)
 }
