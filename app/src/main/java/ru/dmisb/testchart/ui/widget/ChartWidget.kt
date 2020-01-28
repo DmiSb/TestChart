@@ -3,6 +3,7 @@ package ru.dmisb.testchart.ui.widget
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Rect
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
@@ -34,7 +35,8 @@ class ChartWidget @JvmOverloads constructor(
 
     private val displayWidth: Int = context.resources.displayMetrics.widthPixels
     private var columnWidth: Float = 0f
-    private var gridLineWidth: Float = 0f
+    private var gridLineWidth: Float = 1f
+
 
     private var prodLineNames: List<String> = listOf()
     private var history: List<History> = listOf()
@@ -47,6 +49,7 @@ class ChartWidget @JvmOverloads constructor(
     private val valuePaint = Paint()
     private val gridPaint = Paint()
     private val footerPaint = Paint()
+    private val shadowPaint = Paint()
 
     private var downX: Float = 0f
     private var downY: Float = 0f
@@ -78,6 +81,11 @@ class ChartWidget @JvmOverloads constructor(
         gridPaint.color = context.color(R.color.chart_grid)
         gridPaint.style = Paint.Style.STROKE
         gridPaint.strokeWidth = gridLineWidth
+
+        footerPaint.color = context.color(R.color.chart_footer_text)
+        footerPaint.isAntiAlias = true
+        footerPaint.textSize = resources.getDimensionPixelSize(R.dimen.chart_footer_text_size).toFloat()
+        footerPaint.style = Paint.Style.STROKE
 
         setOnTouchListener { _, event ->
             Log.d("TAG_APP", "ChartWidget OnTouchListener event=${event.actionMasked}")
@@ -156,6 +164,7 @@ class ChartWidget @JvmOverloads constructor(
     }
 
     private fun drawBackground(canvas: Canvas) {
+        // Заполнение серым цветом всего пространства
         canvas.drawRect(
             paddingLeft.toFloat(),
             paddingTop.toFloat(),
@@ -166,6 +175,7 @@ class ChartWidget @JvmOverloads constructor(
     }
 
     private fun drawAverage(canvas: Canvas) {
+        // Отрисовка средних значений
         average.forEachIndexed { index, data ->
             val x1 = columnWidth * index + paddingLeft
             val x2 = x1 + (columnWidth * data.second).toFloat()
@@ -174,6 +184,7 @@ class ChartWidget @JvmOverloads constructor(
             val y1 = paddingTop.toFloat()
             val y2 = y1 + rowHeight
 
+            // Если точка нажатия попадает в ячейку запоминаем как выделенную
             if (downX != 0f && downX >= x1 && downX <= x3 && downY != 0f && downY >= y1 && downY <= y2) {
                 selectedCell = SelectedCell(
                     prodLine = "",
@@ -193,13 +204,14 @@ class ChartWidget @JvmOverloads constructor(
     }
 
     private fun drawHistory(canvas: Canvas) {
+        // Отрисовка данных
         prodLineNames.forEachIndexed { prodLineIndex, prodLineName ->
             history.firstOrNull { it.prodline_title == prodLineName }?.data?.let { prodLine ->
                 average.forEachIndexed { timeIndex, data ->
                     prodLine.firstOrNull {
                         dateFormat?.format(it.time) == data.first
                     }?.let {
-                        val x1 = columnWidth * timeIndex + paddingLeft
+                        val x1 = columnWidth * timeIndex + paddingLeft              //
                         val x2 = x1 + (columnWidth * it.value).toFloat()
                         val x3 = columnWidth * (timeIndex + 1) + paddingLeft
 
@@ -209,6 +221,7 @@ class ChartWidget @JvmOverloads constructor(
                         canvas.drawRect(x1, y1, x2, y2, valuePaint)
                         canvas.drawRect(x2, y1, x3, y2, defaultPaint)
 
+                        // Если точка нажатия попадает в ячейку запоминаем как выделенную
                         if (downX != 0f && downX >= x1 && downX <= x3 && downY != 0f && downY >= y1 && downY <= y2) {
                             selectedCell = SelectedCell(
                                 prodLine = prodLineName,
@@ -229,7 +242,10 @@ class ChartWidget @JvmOverloads constructor(
 
     private fun drawGrid(canvas: Canvas) {
         var y = 0f
+
+        // Отрисовка горизонтальных линий
         (0 .. prodLineNames.size).forEach {
+            // приращения по высоте для каждой производственной линии
             y = rowHeight * (it + 1)
             canvas.drawLine(
                 paddingLeft.toFloat(),
@@ -239,7 +255,7 @@ class ChartWidget @JvmOverloads constructor(
                 gridPaint
             )
         }
-
+        // отрисовка нижней линии с отступом на высоту footer
         canvas.drawLine(
             paddingLeft.toFloat(),
             y + footerHeight,
@@ -247,11 +263,12 @@ class ChartWidget @JvmOverloads constructor(
             y + footerHeight,
             gridPaint
         )
-
+        // отрисовка вертикальных линий
         if (history.isNotEmpty()) {
             val data = history[0].data
             var x: Float
             (1 .. data.size).forEach {
+                // приращение по ширине на ширину ячейки
                 x = columnWidth * it + paddingLeft
                 canvas.drawLine(x, paddingTop.toFloat(), x, y, gridPaint)
             }
@@ -259,7 +276,25 @@ class ChartWidget @JvmOverloads constructor(
     }
 
     private fun drawFooter(canvas: Canvas) {
+        average.forEachIndexed { timeIndex, data ->
+            val textBounds = Rect()
+            footerPaint.getTextBounds(data.first, 0, data.first.length, textBounds)
 
+            val x1 = columnWidth * timeIndex +                                  // начало ячейки по индексу
+                    paddingLeft +                                               // отступ слева
+                    (columnWidth - (textBounds.right - textBounds.left)) / 2    // половина оставшегося расстояния в ячейке по ширине
+
+            val y1 = paddingTop.toFloat() +                                     // отступ сверху
+                    rowHeight * (prodLineNames.size + 1) +                      // верх ячейки
+                    (footerHeight + (textBounds.bottom - textBounds.top)) / 2   // половина оставшегося расстояния в ячейке по высоте
+
+            canvas.drawText(
+                data.first,
+                x1,
+                y1,
+                footerPaint
+            )
+        }
     }
 
     private fun drawSelectedCell(canvas: Canvas) {
