@@ -30,6 +30,13 @@ object MockData {
                     {"time":"2020-01-26 11:00:00","value":0.97211538461538,"total":3600,"totalPeriod":3600},
                     {"time":"2020-01-26 12:00:00","value":0.96923076923077,"total":3600,"totalPeriod":3600}
                 ],"kim":0.9665557907469,"total":57214,"totalWork":57214,"totalPeriod":86400},
+            {"prodline_id":6,"prodline_title":"2.4","data":[
+                    {"time":"2020-01-26 08:00:00","value":0.83897058823529,"total":3600,"totalPeriod":3600},
+                    {"time":"2020-01-26 09:00:00","value":0.84697712418301,"total":3600,"totalPeriod":3600},
+                    {"time":"2020-01-26 10:00:00","value":0.90545840823664,"total":3600,"totalPeriod":3600},
+                    {"time":"2020-01-26 11:00:00","value":0.96192810457516,"total":3600,"totalPeriod":3600},
+                    {"time":"2020-01-26 12:00:00","value":0.90089869281046,"total":3600,"totalPeriod":3600}
+                ],"kim":0.91591568421702,"total":57214,"totalWork":57214,"totalPeriod":86400},    
             {"prodline_id":9,"prodline_title":"4.0","data":[
                     {"time":"2020-01-26 08:00:00","value":0.96604239555464,"total":3600,"totalPeriod":3600},
                     {"time":"2020-01-26 09:00:00","value":0.97787610619469,"total":3600,"totalPeriod":3600},
