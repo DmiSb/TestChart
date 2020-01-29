@@ -12,8 +12,8 @@
         android:layout_width="match_parent"
         android:layout_height="?actionBarSize"
         android:background="@color/colorPrimary"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
+        android:paddingStart="@dimen/dimen_16"
+        android:paddingEnd="@dimen/dimen_16"
         android:gravity="center_vertical"
         android:textColor="@color/white"
         android:textSize="20sp"
@@ -28,12 +28,18 @@
         android:overScrollMode="never"
         app:layout_constraintTop_toBottomOf="@+id/toolbarView">
 
-        <ru.dmisb.testchart.ui.widget.ChartWidget
-            android:id="@+id/chartView"
+        <FrameLayout
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:rowHeight="@dimen/chart_row_height"
-            app:footerHeight="@dimen/chart_footer_height"/>
+            android:layout_height="wrap_content">
+
+            <ru.dmisb.testchart.ui.widget.ChartWidget
+                android:id="@+id/chartView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:rowHeight="@dimen/chart_row_height"
+                app:footerHeight="@dimen/chart_footer_height"/>
+
+        </FrameLayout>
 
     </HorizontalScrollView>
 
@@ -49,11 +55,56 @@
             android:layout_width="wrap_content"
             android:layout_height="@dimen/chart_row_height"
             android:gravity="center_vertical"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
+            android:paddingStart="@dimen/dimen_8"
+            android:paddingEnd="@dimen/dimen_8"
             android:textColor="@color/colorPrimaryDark"
             android:text="@string/chart_widget_average"/>
 
     </LinearLayout>
+
+    <Spinner
+        android:id="@+id/periodView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/dimen_16"
+        android:layout_marginStart="@dimen/dimen_16"
+        android:layout_marginEnd="@dimen/dimen_16"
+        app:layout_constraintTop_toBottomOf="@+id/chartContainer"/>
+
+    <TextView
+        android:id="@+id/prodLineView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/dimen_16"
+        android:layout_marginStart="@dimen/dimen_16"
+        android:layout_marginEnd="@dimen/dimen_16"
+        android:textColor="@color/colorPrimaryDark"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@+id/periodView"
+        tools:text="@string/chart_prod_line"/>
+
+    <TextView
+        android:id="@+id/timeView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/dimen_16"
+        android:layout_marginStart="@dimen/dimen_16"
+        android:layout_marginEnd="@dimen/dimen_16"
+        android:textColor="@color/colorPrimaryDark"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@+id/prodLineView"
+        tools:text="@string/chart_time"/>
+
+    <TextView
+        android:id="@+id/valueView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/dimen_16"
+        android:layout_marginStart="@dimen/dimen_16"
+        android:layout_marginEnd="@dimen/dimen_16"
+        android:textColor="@color/colorPrimaryDark"
+        android:textSize="18sp"
+        app:layout_constraintTop_toBottomOf="@+id/timeView"
+        tools:text="@string/chart_time"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -37,7 +37,7 @@ class ChartWidget @JvmOverloads constructor(
     private val displayWidth: Int = context.resources.displayMetrics.widthPixels
     private var gridLineWidth: Float = context.dpToPx(1f)
     private var shadowWidth: Float = context.dpToPx(3f)
-    private var columnWidth: Float = 0f
+    private var cellWidth: Float = 0f
 
     private var prodLineNames: List<String> = listOf()
     private var history: List<History> = listOf()
@@ -55,6 +55,8 @@ class ChartWidget @JvmOverloads constructor(
     private var downX: Float = 0f
     private var downY: Float = 0f
     private var selectedCell: SelectedCell? = null
+
+    private var listener: ChartWidgetListener? = null
 
     init {
         if (attrs != null) {
@@ -128,14 +130,18 @@ class ChartWidget @JvmOverloads constructor(
             Pair(time, it.value)
         }.orEmpty()
 
-        calcColumnWidth()
-
-        measure(0, 0)
+        calcCellWidth()
+        calcSize()
         invalidate()
     }
 
-    private fun calcColumnWidth() {
-        columnWidth = when {
+    fun setListener(listener: ChartWidgetListener) {
+        this.listener = listener
+    }
+
+    private fun calcCellWidth() {
+        // Расчет ширины ячейки
+        cellWidth = when {
             average.isEmpty() -> 0f
             average.size <= maxColumns -> (displayWidth - paddingLeft - paddingRight).toFloat() / average.size
             else -> (displayWidth - paddingLeft).toFloat() / maxColumns
@@ -144,15 +150,20 @@ class ChartWidget @JvmOverloads constructor(
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        calcSize()
+    }
 
-        var newWidth = if (columnWidth == 0f) displayWidth
-        else (columnWidth * average.size).toInt() + paddingLeft + paddingRight
+    private fun calcSize() {
+        // Расчет размеров ChartView
+        var newWidth = if (cellWidth == 0f) displayWidth
+        else (cellWidth * average.size).toInt() + paddingLeft + paddingRight
 
         if (newWidth < displayWidth) newWidth = displayWidth
 
         val newHeight = (rowHeight * (prodLineNames.size + 1)) +
                 footerHeight +
                 paddingTop + paddingBottom
+
         setMeasuredDimension(newWidth, newHeight.toInt())
     }
 
@@ -183,16 +194,16 @@ class ChartWidget @JvmOverloads constructor(
     private fun drawAverage(canvas: Canvas) {
         // Отрисовка средних значений
         average.forEachIndexed { index, data ->
-            val x1 = columnWidth * index + paddingLeft
-            val x2 = x1 + (columnWidth * data.second).toFloat()
-            val x3 = columnWidth * (index + 1) + paddingLeft
+            val x1 = cellWidth * index + paddingLeft
+            val x2 = x1 + (cellWidth * data.second).toFloat()
+            val x3 = cellWidth * (index + 1) + paddingLeft
 
             val y1 = paddingTop.toFloat()
             val y2 = y1 + rowHeight
 
             // Если точка нажатия попадает в ячейку запоминаем как выделенную
             if (downX != 0f && downX >= x1 && downX <= x3 && downY != 0f && downY >= y1 && downY <= y2) {
-                selectedCell = SelectedCell(
+                val cell = SelectedCell(
                     prodLine = "",
                     time = data.first,
                     value = data.second,
@@ -202,6 +213,13 @@ class ChartWidget @JvmOverloads constructor(
                     startY = y1,
                     endY = y2
                 )
+
+                if (selectedCell == null || cell != selectedCell) {
+                    selectedCell = cell
+                    listener?.onSelect(
+                        ChartWidgetCell("", data.first, data.second)
+                    )
+                }
             }
 
             canvas.drawRect(x1, y1, x2, y2, averagePaint)
@@ -217,9 +235,9 @@ class ChartWidget @JvmOverloads constructor(
                     prodLine.firstOrNull {
                         dateFormat?.format(it.time) == data.first
                     }?.let {
-                        val x1 = columnWidth * timeIndex + paddingLeft              //
-                        val x2 = x1 + (columnWidth * it.value).toFloat()
-                        val x3 = columnWidth * (timeIndex + 1) + paddingLeft
+                        val x1 = cellWidth * timeIndex + paddingLeft              //
+                        val x2 = x1 + (cellWidth * it.value).toFloat()
+                        val x3 = cellWidth * (timeIndex + 1) + paddingLeft
 
                         val y1 = paddingTop.toFloat() + rowHeight * (prodLineIndex + 1)
                         val y2 = y1 + rowHeight
@@ -229,7 +247,7 @@ class ChartWidget @JvmOverloads constructor(
 
                         // Если точка нажатия попадает в ячейку запоминаем как выделенную
                         if (downX != 0f && downX >= x1 && downX <= x3 && downY != 0f && downY >= y1 && downY <= y2) {
-                            selectedCell = SelectedCell(
+                            val cell = SelectedCell(
                                 prodLine = prodLineName,
                                 time = data.first,
                                 value = it.value,
@@ -239,6 +257,13 @@ class ChartWidget @JvmOverloads constructor(
                                 startY = y1,
                                 endY = y2
                             )
+
+                            if (selectedCell == null || cell != selectedCell) {
+                                selectedCell = cell
+                                listener?.onSelect(
+                                    ChartWidgetCell(prodLineName, data.first, it.value)
+                                )
+                            }
                         }
                     }
                 }
@@ -275,7 +300,7 @@ class ChartWidget @JvmOverloads constructor(
             var x: Float
             (1 .. data.size).forEach {
                 // приращение по ширине на ширину ячейки
-                x = columnWidth * it + paddingLeft
+                x = cellWidth * it + paddingLeft
                 canvas.drawLine(x, paddingTop.toFloat(), x, y, gridPaint)
             }
         }
@@ -286,9 +311,9 @@ class ChartWidget @JvmOverloads constructor(
             val textBounds = Rect()
             footerPaint.getTextBounds(data.first, 0, data.first.length, textBounds)
 
-            val x1 = columnWidth * timeIndex +                                  // начало ячейки по индексу
+            val x1 = cellWidth * timeIndex +                                  // начало ячейки по индексу
                     paddingLeft +                                               // отступ слева
-                    (columnWidth - (textBounds.right - textBounds.left)) / 2    // половина оставшегося расстояния в ячейке по ширине
+                    (cellWidth - (textBounds.right - textBounds.left)) / 2    // половина оставшегося расстояния в ячейке по ширине
 
             val y1 = paddingTop.toFloat() +                                     // отступ сверху
                     rowHeight * (prodLineNames.size + 1) +                      // верх ячейки
@@ -322,7 +347,7 @@ class ChartWidget @JvmOverloads constructor(
                 this.startY,
                 this.valueX,
                 this.endY,
-                valuePaint
+                if (this.prodLine.isEmpty()) averagePaint else valuePaint
             )
             // и оставшегося места
             canvas.drawRect(
@@ -335,7 +360,7 @@ class ChartWidget @JvmOverloads constructor(
         }
     }
 
-    class SelectedCell(
+    data class SelectedCell(
         val prodLine: String,
         val time: String,
         val value: Double,

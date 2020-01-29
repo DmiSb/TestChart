@@ -2,4 +2,12 @@
     <string name="app_name">Test Chart</string>
 
     <string name="chart_widget_average">Среднее</string>
+    <string-array name="chert_period">
+        <item>За день (5 часов)</item>
+        <item>За день (10 часов)</item>
+        <item>За месяц</item>
+    </string-array>
+    <string name="chart_prod_line">Производственная линия: %s</string>
+    <string name="chart_time">Время: %s</string>
+    <string name="chart_value">Значение: %s</string>
 </resources>
