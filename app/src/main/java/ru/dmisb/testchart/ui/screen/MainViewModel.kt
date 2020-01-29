@@ -31,5 +31,6 @@ class MainViewModel : ViewModel() {
             2 -> MockData.getMonthly()
             else -> MockData.getDailyData5Hour()
         }
+        _selectedCell.value = null
     }
 }

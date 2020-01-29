@@ -1,14 +1,14 @@
 package ru.dmisb.testchart.ui.widget
 
 import android.content.Context
-import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.drawable.Drawable
 import android.util.AttributeSet
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.content.ContextCompat
 import ru.dmisb.testchart.R
 import ru.dmisb.testchart.data.model.ChartData
 import ru.dmisb.testchart.data.model.History
@@ -36,7 +36,7 @@ class ChartWidget @JvmOverloads constructor(
 
     private val displayWidth: Int = context.resources.displayMetrics.widthPixels
     private var gridLineWidth: Float = context.dpToPx(1f)
-    private var shadowWidth: Float = context.dpToPx(3f)
+    private var shadowWidth: Float = context.dpToPx(8f)
     private var cellWidth: Float = 0f
 
     private var prodLineNames: List<String> = listOf()
@@ -50,7 +50,8 @@ class ChartWidget @JvmOverloads constructor(
     private val valuePaint = Paint()
     private val gridPaint = Paint()
     private val footerPaint = Paint()
-    private val shadowPaint = Paint()
+
+    private var shadow : Drawable? = null
 
     private var downX: Float = 0f
     private var downY: Float = 0f
@@ -88,16 +89,9 @@ class ChartWidget @JvmOverloads constructor(
         footerPaint.textSize = resources.getDimensionPixelSize(R.dimen.chart_footer_text_size).toFloat()
         footerPaint.style = Paint.Style.FILL
 
-        val filter = BlurMaskFilter(shadowWidth, BlurMaskFilter.Blur.NORMAL)
-        shadowPaint.color = context.color(R.color.chart_shadow)
-        shadowPaint.isAntiAlias = true
-        shadowPaint.maskFilter = filter
-        shadowPaint.style = Paint.Style.FILL
-
-        setLayerType(LAYER_TYPE_SOFTWARE, null)
+        shadow = ContextCompat.getDrawable(context, android.R.drawable.dialog_holo_light_frame)
 
         setOnTouchListener { _, event ->
-            Log.d("TAG_APP", "ChartWidget OnTouchListener event=${event.actionMasked}")
             when (event.actionMasked)  {
                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_MOVE -> {
                     downX = 0f
@@ -120,6 +114,10 @@ class ChartWidget @JvmOverloads constructor(
     }
 
     fun setData(data: ChartData?) {
+        downX = 0f
+        downY = 0f
+        selectedCell = null
+
         TimeStep.values().firstOrNull { it.value == data?.timeStep.orEmpty() }?.let {
             dateFormat = SimpleDateFormat(it.formatPattern, Locale.getDefault())
         }
@@ -135,7 +133,7 @@ class ChartWidget @JvmOverloads constructor(
         invalidate()
     }
 
-    fun setListener(listener: ChartWidgetListener) {
+    fun setListener(listener: ChartWidgetListener?) {
         this.listener = listener
     }
 
@@ -169,6 +167,7 @@ class ChartWidget @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
+
         canvas?.let {
             drawBackground(it)
             drawAverage(it)
@@ -332,15 +331,13 @@ class ChartWidget @JvmOverloads constructor(
         // Отрисовка выделенной ячейки
         selectedCell?.apply {
             // Заливка ячейки фоном с тенью
-            canvas.drawRoundRect(
-                this.startX - shadowWidth / 2,
-                this.startY - shadowWidth / 2,
-                this.endX + shadowWidth,
-                this.endY + shadowWidth,
-                shadowWidth,
-                shadowWidth,
-                shadowPaint
+            shadow?.setBounds(
+                (this.startX - shadowWidth).toInt(),
+                (this.startY - shadowWidth).toInt(),
+                (this.endX + shadowWidth).toInt(),
+                (this.endY + shadowWidth).toInt()
             )
+            shadow?.draw(canvas)
             // Отрисовка значения
             canvas.drawRect(
                 this.startX,
